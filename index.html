@@ -118,7 +118,8 @@
             budget: 1500,
             chartMode: 'store',
             selectedDate: null,
-            customHex: '#A7C7E7'
+            customHex: '#A7C7E7',
+            syncStatus: 'idle' // 'idle', 'syncing', 'synced', 'error'
         };
 
         const MONTH_NAMES = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
@@ -160,6 +161,8 @@
         };
 
         function listenToData() {
+            state.syncStatus = 'syncing';
+            render();
             const docPath = doc(db, 'artifacts', appId, 'users', state.user.uid, 'data', 'records');
             onSnapshot(docPath, (snapshot) => {
                 if (snapshot.exists()) {
@@ -168,20 +171,35 @@
                     state.themeColor = data.themeColor || state.themeColor;
                     state.customHex = state.themeColor;
                     state.budget = data.budget || state.budget;
-                    render();
+                    state.syncStatus = 'synced';
+                } else {
+                    state.syncStatus = 'synced';
                 }
-            }, (err) => console.error("Firestore Listen Error:", err));
+                render();
+            }, (err) => {
+                console.error("Firestore Listen Error:", err);
+                state.syncStatus = 'error';
+                render();
+            });
         }
 
         async function saveData() {
             if (!state.user) return;
+            state.syncStatus = 'syncing';
+            render();
             const docPath = doc(db, 'artifacts', appId, 'users', state.user.uid, 'data', 'records');
-            await setDoc(docPath, {
-                allRecords: state.records,
-                themeColor: state.themeColor,
-                budget: Number(state.budget),
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
+            try {
+                await setDoc(docPath, {
+                    allRecords: state.records,
+                    themeColor: state.themeColor,
+                    budget: Number(state.budget),
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                state.syncStatus = 'synced';
+            } catch (err) {
+                state.syncStatus = 'error';
+            }
+            render();
         }
 
         function getMonthStats() {
@@ -393,14 +411,37 @@
         }
 
         function renderSettings(container) {
+            const isGoogleUser = state.user && !state.user.isAnonymous;
+            const syncUI = {
+                idle: { text: '尚未同步', color: 'text-slate-300' },
+                syncing: { text: '同步中...', color: 'text-sky-400 animate-pulse' },
+                synced: { text: '已同步', color: 'text-emerald-400' },
+                error: { text: '同步錯誤', color: 'text-rose-400' }
+            };
+            const currentSync = syncUI[state.syncStatus];
+
             container.innerHTML = `
                 <div class="space-y-6 animate-in fade-in duration-500">
-                    <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
-                        <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">CLOUD SYNC</p>
-                        ${state.user && !state.user.isAnonymous ? 
-                            `<button onclick="logout()" class="p-2 text-rose-400"><i data-lucide="log-out"></i></button>` :
-                            `<button onclick="loginWithGoogle()" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
-                        }
+                    <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col gap-4">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">CLOUD SYNC</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[8px] font-bold uppercase ${currentSync.color}">${currentSync.text}</span>
+                                ${isGoogleUser ? 
+                                    `<button onclick="logout()" class="p-2 text-rose-400"><i data-lucide="log-out" class="w-4 h-4"></i></button>` :
+                                    `<button onclick="loginWithGoogle()" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
+                                }
+                            </div>
+                        </div>
+                        ${isGoogleUser ? `
+                            <div class="flex items-center gap-3 p-4 bg-slate-50/50 rounded-[1.5rem] border border-slate-100">
+                                <img src="${state.user.photoURL || ''}" class="w-8 h-8 rounded-full border border-white shadow-sm" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(state.user.displayName || 'U')}&background=random'">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[10px] font-bold text-slate-700 truncate">${state.user.displayName || 'User'}</p>
+                                    <p class="text-[8px] text-slate-300 truncate">${state.user.email}</p>
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
@@ -435,6 +476,7 @@
                     </div>
                 </div>
             `;
+            lucide.createIcons();
         }
 
         window.switchTab = (t) => { state.activeTab = t; render(); };
