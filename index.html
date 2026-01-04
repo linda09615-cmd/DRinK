@@ -11,6 +11,10 @@
     <meta name="apple-mobile-web-app-title" content="DRinK 2026">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
+
+    <!-- App Icons (GitHub icon.png) -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -529,13 +533,11 @@
             `;
         }
 
-        // 當輸入框改變時，只更新資料，不重新渲染 DOM 以防止失去焦點
         window.updateEntrySilently = (idx, field, value) => {
             if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
             state.records[state.selectedDate][idx][field] = value;
         };
 
-        // 按鈕類型的更新（Ice, Sugar）需要重新渲染
         window.updateEntry = (idx, field, value) => {
             if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
             state.records[state.selectedDate][idx][field] = value;
