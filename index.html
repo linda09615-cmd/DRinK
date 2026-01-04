@@ -93,7 +93,14 @@
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = {
+  apiKey: "AIzaSyAykN5sjRn5IDDbjl8bagS4RuzS0udtT2s",
+  authDomain: "drink-eeii.firebaseapp.com",
+  projectId: "drink-eeii",
+  storageBucket: "drink-eeii.firebasestorage.app",
+  messagingSenderId: "170517437798",
+  appId: "1:170517437798:web:295d4b8af65370e5847ca7"
+};
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
