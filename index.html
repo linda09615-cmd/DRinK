@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DRinK 2026 | 飲品紀錄專家</title>
+    
+    <!-- App Icon 設定 -->
+    <!-- iOS 圖示 -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <!-- Android / Chrome 圖示 -->
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <!-- PWA / Mobile App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DRinK 2026">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ffffff">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Fredoka', "Microsoft JhengHei", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        #app {
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .modal-animate { animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+        .safe-pt { padding-top: env(safe-area-inset-top); }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <div id="app" class="transition-colors duration-500 flex flex-col">
+        <!-- Header -->
+        <header class="sticky top-0 z-40 bg-white/70 backdrop-blur-md border-b border-slate-50 px-6 py-4 flex justify-between items-center safe-pt">
+            <div class="flex items-center gap-2">
+                <div id="logo-icon" class="w-9 h-9 rounded-2xl flex items-center justify-center text-white shadow-sm">
+                    <i data-lucide="glass-water" class="w-5 h-5"></i>
+                </div>
+                <h1 id="logo-text" class="text-lg font-bold tracking-tight">DRinK</h1>
+            </div>
+            <div class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">2026 Edition</div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 max-w-md mx-auto px-5 py-6 w-full pb-40">
+            <!-- JS Inject -->
+        </main>
+
+        <!-- Bottom Nav -->
+        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[85%] max-w-xs safe-pb">
+            <div class="glass-nav border border-white/50 h-16 rounded-full shadow-2xl flex items-center justify-around px-4">
+                <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-home">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                    <span class="text-[9px] font-bold">HOME</span>
+                </button>
+                <button onclick="switchTab('stats')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-stats">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <span class="text-[9px] font-bold">STATS</span>
+                </button>
+                <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-settings">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span class="text-[9px] font-bold">SETS</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Modal -->
+        <div id="modal" class="fixed inset-0 z-[60] hidden flex items-end sm:items-center justify-center bg-slate-900/30 backdrop-blur-md"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026-pro';
+
+        let state = {
+            user: null,
+            activeTab: 'home',
+            activeMonth: new Date().getMonth(),
+            records: {},
+            themeColor: '#A7C7E7',
+            budget: 1500,
+            chartMode: 'store',
+            selectedDate: null,
+            customHex: '#A7C7E7'
+        };
+
+        const MONTH_NAMES = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+        const ICE_OPTIONS = ["固定", "正常", "少冰", "微冰", "去冰", "常溫", "溫", "熱"];
+        const SUGAR_OPTIONS = ["固定", "正常", "少糖", "半糖", "微糖", "一分糖", "無糖"];
+        const TOPPING_OPTIONS = ["無", "波霸", "珍珠", "混珠", "綠茶凍"];
+        const PRESET_COLORS = ['#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#A7C7E7', '#F3D1F4', '#D1F4F1', '#FEC8D8', '#FF968A'];
+        const MACARON_PALETTE = ['#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#A7C7E7', '#F3D1F4', '#FFE4E1', '#E6E6FA', '#F0FFF0'];
+
+        async function init() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) { console.error(err); }
+
+            onAuthStateChanged(auth, (u) => {
+                state.user = u;
+                if (u) listenToData();
+                render();
+            });
+        }
+
+        function listenToData() {
+            const docPath = doc(db, 'artifacts', appId, 'users', state.user.uid, 'data', 'records');
+            onSnapshot(docPath, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    state.records = data.allRecords || {};
+                    state.themeColor = data.themeColor || state.themeColor;
+                    state.customHex = state.themeColor;
+                    state.budget = data.budget || state.budget;
+                    render();
+                }
+            }, (error) => console.error(error));
+        }
+
+        async function saveData() {
+            if (!state.user) return;
+            const docPath = doc(db, 'artifacts', appId, 'users', state.user.uid, 'data', 'records');
+            await setDoc(docPath, {
+                allRecords: state.records,
+                themeColor: state.themeColor,
+                budget: Number(state.budget),
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+
+        function getMonthStats() {
+            const monthPrefix = `2026-${String(state.activeMonth + 1).padStart(2, '0')}`;
+            const monthDrinks = Object.keys(state.records)
+                .filter(d => d.startsWith(monthPrefix))
+                .flatMap(d => state.records[d])
+                .filter(d => d && (d.item || d.store));
+
+            const spent = monthDrinks.reduce((sum, d) => sum + (Number(d.price) || 0), 0);
+            const getFav = (list, key) => {
+                const counts = {};
+                list.forEach(d => { if(d[key]) counts[d[key]] = (counts[d[key]] || 0) + 1; });
+                return Object.entries(counts).sort((a,b) => b[1]-a[1])[0]?.[0] || "N/A";
+            };
+            return {
+                spent, count: monthDrinks.length,
+                favStore: getFav(monthDrinks, 'store'),
+                favItem: getFav(monthDrinks, 'item'),
+                percent: Math.min(100, (spent / (state.budget || 1)) * 100)
+            };
+        }
+
+        function getYearlyChartData() {
+            const allDrinks = Object.values(state.records).flat().filter(d => d && (d.item || d.store));
+            const key = state.chartMode;
+            const counts = {};
+            allDrinks.forEach(d => {
+                let val = d[key];
+                if (val) counts[val] = (counts[val] || 0) + 1;
+            });
+            const total = allDrinks.length || 1;
+            return Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([label, count], idx) => ({
+                    label, count, percent: (count/total)*100, color: MACARON_PALETTE[idx % MACARON_PALETTE.length]
+                }));
+        }
+
+        function render() {
+            const container = document.getElementById('main-content');
+            document.body.style.backgroundColor = `${state.themeColor}05`;
+            document.getElementById('logo-icon').style.backgroundColor = state.themeColor;
+            document.getElementById('logo-text').style.color = state.themeColor;
+            
+            ['home', 'stats', 'settings'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (state.activeTab === t) {
+                    btn.style.color = state.themeColor;
+                    btn.classList.remove('opacity-20');
+                    btn.classList.add('scale-110');
+                } else {
+                    btn.style.color = '#94a3b8';
+                    btn.classList.add('opacity-20');
+                    btn.classList.remove('scale-110');
+                }
+            });
+
+            if (state.activeTab === 'home') renderHome(container);
+            else if (state.activeTab === 'stats') renderStats(container);
+            else if (state.activeTab === 'settings') renderSettings(container);
+
+            lucide.createIcons();
+        }
+
+        function renderHome(container) {
+            const s = getMonthStats();
+            container.innerHTML = `
+                <div class="space-y-4 animate-in fade-in duration-500">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
+                            <i data-lucide="store" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">MONTHLY FAVORITE STORE</p>
+                            <p class="text-sm font-bold text-slate-600 truncate w-full">${s.favStore}</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
+                            <i data-lucide="heart" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">MONTHLY FAVORITE ITEM</p>
+                            <p class="text-sm font-bold text-slate-600 truncate w-full">${s.favItem}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-[3rem] shadow-sm border border-slate-50 space-y-6">
+                        <div class="grid grid-cols-2 divide-x divide-slate-50">
+                            <div class="flex flex-col items-center space-y-1">
+                                <p class="text-[8px] font-bold text-slate-300 uppercase">MONTHLY SPENT</p>
+                                <p class="text-xl font-bold text-slate-700">$${s.spent} <span class="text-[10px] text-slate-200">/ ${state.budget}</span></p>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <p class="text-[8px] font-bold text-slate-300 uppercase">MONTHLY CUPS</p>
+                                <p class="text-xl font-bold" style="color: ${state.themeColor}">${s.count} <span class="text-[10px]">Cups</span></p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between px-1 text-[9px] font-bold uppercase">
+                                <span class="text-slate-300">BUDGET PROGRESS</span>
+                                <span style="color: ${state.themeColor}">${Math.round(s.percent)}%</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                                <div class="h-full transition-all duration-1000" style="width: ${s.percent}%; background-color: ${s.spent > state.budget ? '#fb7185' : state.themeColor}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-[3rem] shadow-sm border border-slate-50 overflow-hidden">
+                        <div class="flex items-center justify-between p-6 pb-2">
+                            <button onclick="state.activeMonth = state.activeMonth === 0 ? 11 : state.activeMonth - 1; render();" class="p-2 text-slate-200"><i data-lucide="chevron-left"></i></button>
+                            <div class="text-center">
+                                <h2 class="text-lg font-bold text-slate-700 uppercase">${MONTH_NAMES[state.activeMonth]}</h2>
+                                <span class="text-[9px] font-bold text-slate-300 uppercase">2026</span>
+                            </div>
+                            <button onclick="state.activeMonth = state.activeMonth === 11 ? 0 : state.activeMonth + 1; render();" class="p-2 text-slate-200"><i data-lucide="chevron-right"></i></button>
+                        </div>
+                        <div class="grid grid-cols-7 text-center py-2 text-[9px] font-bold text-slate-200">
+                            <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
+                        </div>
+                        <div class="grid grid-cols-7 border-t border-slate-50" id="calendar-grid"></div>
+                    </div>
+                </div>
+            `;
+            const grid = document.getElementById('calendar-grid');
+            const firstDay = new Date(2026, state.activeMonth, 1).getDay();
+            const daysInMonth = new Date(2026, state.activeMonth + 1, 0).getDate();
+            for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className: 'aspect-square bg-slate-50/5'}));
+            for (let d = 1; d <= daysInMonth; d++) {
+                const day = document.createElement('div');
+                const dStr = `2026-${String(state.activeMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dr = (state.records[dStr] || []).filter(x => x && (x.item || x.store));
+                day.className = 'aspect-square p-2 border-r border-b border-slate-50 cursor-pointer hover:bg-slate-50/50 relative';
+                day.innerHTML = `<span class="absolute top-2 left-2 text-[9px] font-bold text-slate-300">${d}</span>
+                                <div class="mt-4 flex flex-wrap gap-1 justify-center">${dr.map(() => `<div style="color: ${state.themeColor}"><i data-lucide="cup-soda" style="width:10px"></i></div>`).join('')}</div>`;
+                day.onclick = () => openModal(dStr);
+                grid.appendChild(day);
+            }
+        }
+
+        function renderStats(container) {
+            const chartData = getYearlyChartData();
+            container.innerHTML = `
+                <div class="space-y-4 animate-in fade-in duration-500">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
+                            <i data-lucide="store" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY FAVORITE STORE</p>
+                            <p class="text-sm font-bold text-slate-600 truncate w-full">${chartData.find(x => true)?.label || 'N/A'}</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
+                            <i data-lucide="heart" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY FAVORITE ITEM</p>
+                            <p class="text-sm font-bold text-slate-600 truncate w-full">N/A</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-[3.5rem] border border-slate-50 shadow-sm space-y-8">
+                        <div class="flex flex-col gap-6 items-center">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="trending-up" class="w-4 h-4" style="color: ${state.themeColor}"></i>
+                                <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">YEARLY DISTRIBUTION</p>
+                            </div>
+                            <div class="flex bg-slate-50 p-1 rounded-3xl border border-slate-100 w-full max-w-[240px]">
+                                <button onclick="setChartMode('store')" class="flex-1 py-3 text-[10px] font-bold rounded-[1.25rem] transition-all flex items-center justify-center gap-2 ${state.chartMode === 'store' ? 'bg-white shadow-sm' : 'text-slate-300'}" style="${state.chartMode === 'store' ? `color:${state.themeColor}` : ''}">
+                                    <i data-lucide="store" class="w-3.5 h-3.5"></i> STORES
+                                </button>
+                                <button onclick="setChartMode('item')" class="flex-1 py-3 text-[10px] font-bold rounded-[1.25rem] transition-all flex items-center justify-center gap-2 ${state.chartMode === 'item' ? 'bg-white shadow-sm' : 'text-slate-300'}" style="${state.chartMode === 'item' ? `color:${state.themeColor}` : ''}">
+                                    <i data-lucide="heart" class="w-3.5 h-3.5"></i> ITEMS
+                                </button>
+                            </div>
+                        </div>
+
+                        ${chartData.length > 0 ? `
+                            <div class="flex justify-center py-4">
+                                <div class="relative w-52 h-52">
+                                    <svg viewBox="0 0 200 200" class="w-full h-full">
+                                        <circle cx="100" cy="100" r="85" fill="none" stroke="#f8fafc" stroke-width="20" />
+                                        ${chartData.reduce((acc, item) => {
+                                            const offset = acc.currentOffset; acc.currentOffset += item.percent;
+                                            const dash = 2 * Math.PI * 85;
+                                            return { ...acc, html: acc.html + `<circle cx="100" cy="100" r="85" fill="none" stroke="${item.color}" stroke-width="20" stroke-dasharray="${dash}" stroke-dashoffset="${dash * (1 - item.percent / 100)}" style="transform: rotate(${offset * 3.6 - 90}deg); transform-origin: center;" />` };
+                                        }, { html: '', currentOffset: 0 }).html}
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="space-y-2 pt-6">
+                                ${chartData.map((item, idx) => `
+                                    <div class="flex items-center gap-4 p-5 bg-slate-50/50 rounded-[2.25rem] border border-slate-50">
+                                        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[10px] font-bold text-slate-300 border" style="border-color: ${item.color}">${idx+1}</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between mb-1">
+                                                <h4 class="text-sm font-bold text-slate-700 truncate">${item.label}</h4>
+                                                <span class="text-[10px] font-bold text-slate-400">${item.count} Cups</span>
+                                            </div>
+                                            <div class="h-1.5 w-full bg-white rounded-full overflow-hidden border border-slate-100/50">
+                                                <div class="h-full" style="width: ${item.percent}%; background-color: ${item.color}"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="py-20 text-center text-slate-200 font-bold uppercase text-[10px]">No data</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSettings(container) {
+            container.innerHTML = `
+                <div class="space-y-6 animate-in fade-in duration-500">
+                    <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
+                        <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">CLOUD SYNC</p>
+                        ${state.user && !state.user.isAnonymous ? 
+                            `<button onclick="signOut(auth)" class="p-2 text-rose-400"><i data-lucide="log-out"></i></button>` :
+                            `<button onclick="signInWithPopup(auth, googleProvider)" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
+                        }
+                    </div>
+
+                    <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
+                        <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">MONTHLY BUDGET</p>
+                        <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+                            <span class="text-slate-300 font-bold text-xs">$</span>
+                            <input type="number" value="${state.budget}" onchange="state.budget=this.value; saveData(); render();" class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-[3.5rem] border border-slate-50 shadow-sm space-y-6">
+                        <div class="flex items-center justify-center gap-2">
+                            <i data-lucide="palette" class="w-4 h-4" style="color: ${state.themeColor}"></i>
+                            <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">THEME COLOR</p>
+                        </div>
+                        <div class="grid grid-cols-5 gap-3">
+                            ${PRESET_COLORS.map(c => `
+                                <button onclick="updateTheme('${c}')" class="aspect-square rounded-2xl flex items-center justify-center transition-all" 
+                                    style="background-color: ${c}; ${state.themeColor.toUpperCase() === c.toUpperCase() ? `border: 4px solid white; box-shadow: 0 0 0 2px ${c};` : ''}">
+                                    ${state.themeColor.toUpperCase() === c.toUpperCase() ? `<i data-lucide="check" class="text-white w-4"></i>` : ''}
+                                </button>
+                            `).join('')}
+                        </div>
+                        <div class="pt-4 border-t border-slate-50 space-y-3">
+                            <p class="text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center">CUSTOM HEX CODE</p>
+                            <div class="relative">
+                                <input type="text" value="${state.customHex}" oninput="handleCustomColor(this.value)" placeholder="#ABCDEF" 
+                                    class="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 outline-none text-xs font-bold text-slate-600 uppercase">
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white shadow-sm" style="background-color: ${state.themeColor}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.switchTab = (t) => { state.activeTab = t; render(); };
+        window.setChartMode = (m) => { state.chartMode = m; render(); };
+        window.updateTheme = (c) => { state.themeColor = c; state.customHex = c; saveData(); render(); };
+        window.handleCustomColor = (v) => {
+            state.customHex = v;
+            if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v)) {
+                state.themeColor = v;
+                saveData();
+                render();
+            }
+        };
+
+        window.openModal = (dateStr) => {
+            state.selectedDate = dateStr;
+            const modal = document.getElementById('modal');
+            const data = state.records[dateStr] || [{}, {}];
+            modal.innerHTML = `
+                <div class="bg-white rounded-t-[3.5rem] sm:rounded-[4rem] shadow-2xl w-full max-w-md max-h-[95vh] overflow-hidden flex flex-col modal-animate">
+                    <div class="p-8 pb-4 flex justify-between items-center border-b border-slate-50 safe-pt">
+                        <div>
+                            <h3 class="text-2xl font-bold text-slate-700">${dateStr.split('-')[1]}/${dateStr.split('-')[2]}</h3>
+                            <p class="text-[10px] font-bold text-slate-300 uppercase mt-1">DRINK ENTRY</p>
+                        </div>
+                        <button onclick="closeModal()" class="p-3 bg-slate-50 rounded-full"><i data-lucide="x" class="w-5 text-slate-300"></i></button>
+                    </div>
+                    <div id="modal-content-area" class="flex-1 overflow-y-auto px-6 py-4 space-y-6 pb-12 hide-scrollbar">
+                        ${[0, 1].map(idx => renderDrinkInput(idx, data[idx] || {})).join('')}
+                    </div>
+                    <div class="p-8 bg-white border-t border-slate-100 flex justify-between items-center sticky bottom-0 safe-pb">
+                        <button onclick="state.records['${dateStr}']=[]; closeModal();" class="text-rose-400 font-bold text-[10px] uppercase">CLEAR ALL</button>
+                        <button onclick="closeModal()" class="px-14 py-4 rounded-[2rem] text-white font-bold text-sm shadow-lg" style="background-color: ${state.themeColor}">DONE</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.closeModal = () => { document.getElementById('modal').classList.add('hidden'); saveData(); render(); };
+
+        function renderDrinkInput(idx, d) {
+            const isCustomTopping = d.topping && !TOPPING_OPTIONS.includes(d.topping);
+            return `
+                <div class="p-7 rounded-[3rem] bg-slate-50/50 border border-slate-100 space-y-5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-xl flex items-center justify-center text-white text-[10px] font-bold" style="background-color: ${state.themeColor}">${idx+1}</div>
+                        <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">DRINK ${idx+1}</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntry(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntry(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        
+                        <div>
+                            <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Ice</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${ICE_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'ice', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.ice===o?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.ice===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Sugar</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${SUGAR_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'sugar', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.sugar===o?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.sugar===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Topping</p>
+                            <div class="flex flex-wrap gap-1.5 mb-2">
+                                ${TOPPING_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'topping', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.topping===o && !isCustomTopping ?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.topping===o && !isCustomTopping ?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                                <button onclick="handleToppingInput(${idx})" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${isCustomTopping ? 'text-white' : 'bg-white text-slate-300'}" style="${isCustomTopping ? `background-color:${state.themeColor}; border-color:${state.themeColor}` : ''}">其他</button>
+                            </div>
+                            ${isCustomTopping ? `<input type="text" placeholder="輸入配料名稱..." value="${d.topping}" oninput="updateEntry(${idx}, 'topping', this.value)" class="w-full px-5 py-2.5 rounded-xl bg-white border border-slate-100 text-[10px] font-bold text-slate-600 outline-none mt-1 shadow-sm">` : ''}
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <p class="text-[9px] font-bold text-slate-300 uppercase">Price</p>
+                            <div class="flex items-center gap-1 bg-white border border-slate-100 px-3 py-1.5 rounded-2xl">
+                                <span class="text-[9px] font-bold text-slate-300">$</span>
+                                <input type="number" value="${d.price || ''}" oninput="updateEntry(${idx}, 'price', this.value)" class="w-12 bg-transparent outline-none text-[11px] font-bold text-slate-600 text-right">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.updateEntry = (idx, field, value) => {
+            if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
+            state.records[state.selectedDate][idx][field] = value;
+            refreshModalContent();
+        };
+
+        window.handleToppingInput = (idx) => {
+            if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
+            state.records[state.selectedDate][idx].topping = " "; 
+            refreshModalContent();
+        };
+
+        function refreshModalContent() {
+            const container = document.getElementById('modal-content-area');
+            if (container) {
+                const data = state.records[state.selectedDate] || [{}, {}];
+                container.innerHTML = [0, 1].map(idx => renderDrinkInput(idx, data[idx] || {})).join('');
+                lucide.createIcons();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
+
