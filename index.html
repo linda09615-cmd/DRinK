@@ -62,7 +62,6 @@
 
         <!-- Main Content -->
         <main id="main-content" class="flex-1 max-w-md mx-auto px-5 py-6 w-full pb-40">
-            <!-- JS Inject -->
         </main>
 
         <!-- Bottom Nav -->
@@ -93,13 +92,13 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyAykN5sjRn5IDDbjl8bagS4RuzS0udtT2s",
-  authDomain: "drink-eeii.firebaseapp.com",
-  projectId: "drink-eeii",
-  storageBucket: "drink-eeii.firebasestorage.app",
-  messagingSenderId: "170517437798",
-  appId: "1:170517437798:web:295d4b8af65370e5847ca7"
-};
+            apiKey: "AIzaSyAykN5sjRn5IDDbjl8bagS4RuzS0udtT2s",
+            authDomain: "drink-eeii.firebaseapp.com",
+            projectId: "drink-eeii",
+            storageBucket: "drink-eeii.firebasestorage.app",
+            messagingSenderId: "170517437798",
+            appId: "1:170517437798:web:295d4b8af65370e5847ca7"
+        };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -126,20 +125,35 @@
         const MACARON_PALETTE = ['#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#A7C7E7', '#F3D1F4', '#FFE4E1', '#E6E6FA', '#F0FFF0'];
 
         async function init() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) { console.error(err); }
-
             onAuthStateChanged(auth, (u) => {
                 state.user = u;
                 if (u) listenToData();
+                else loginAnonymously();
                 render();
             });
         }
+
+        async function loginAnonymously() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) { console.error("Auth Error:", err); }
+        }
+
+        window.loginWithGoogle = async () => {
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (err) {
+                console.error("Google Auth Error:", err);
+            }
+        };
+
+        window.logout = async () => {
+            await signOut(auth);
+        };
 
         function listenToData() {
             const docPath = doc(db, 'artifacts', appId, 'users', state.user.uid, 'data', 'records');
@@ -152,7 +166,7 @@
                     state.budget = data.budget || state.budget;
                     render();
                 }
-            });
+            }, (err) => console.error("Firestore Listen Error:", err));
         }
 
         async function saveData() {
@@ -205,6 +219,7 @@
 
         function render() {
             const container = document.getElementById('main-content');
+            if(!container) return;
             document.body.style.backgroundColor = `${state.themeColor}05`;
             document.getElementById('logo-icon').style.backgroundColor = state.themeColor;
             document.getElementById('logo-text').style.color = state.themeColor;
@@ -270,12 +285,12 @@
 
                     <div class="bg-white rounded-[3rem] shadow-sm border border-slate-50 overflow-hidden">
                         <div class="flex items-center justify-between p-6 pb-2">
-                            <button onclick="state.activeMonth = state.activeMonth === 0 ? 11 : state.activeMonth - 1; render();" class="p-2 text-slate-200"><i data-lucide="chevron-left"></i></button>
+                            <button onclick="changeMonth(-1)" class="p-2 text-slate-200"><i data-lucide="chevron-left"></i></button>
                             <div class="text-center">
                                 <h2 class="text-lg font-bold text-slate-700 uppercase">${MONTH_NAMES[state.activeMonth]}</h2>
                                 <span class="text-[9px] font-bold text-slate-300 uppercase">2026</span>
                             </div>
-                            <button onclick="state.activeMonth = state.activeMonth === 11 ? 0 : state.activeMonth + 1; render();" class="p-2 text-slate-200"><i data-lucide="chevron-right"></i></button>
+                            <button onclick="changeMonth(1)" class="p-2 text-slate-200"><i data-lucide="chevron-right"></i></button>
                         </div>
                         <div class="grid grid-cols-7 text-center py-2 text-[9px] font-bold text-slate-200">
                             <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
@@ -299,6 +314,11 @@
                 grid.appendChild(day);
             }
         }
+
+        window.changeMonth = (dir) => {
+            state.activeMonth = (state.activeMonth + dir + 12) % 12;
+            render();
+        };
 
         function renderStats(container) {
             const chartData = getYearlyChartData();
@@ -374,8 +394,8 @@
                     <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
                         <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">CLOUD SYNC</p>
                         ${state.user && !state.user.isAnonymous ? 
-                            `<button onclick="signOut(auth)" class="p-2 text-rose-400"><i data-lucide="log-out"></i></button>` :
-                            `<button onclick="signInWithPopup(auth, googleProvider)" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
+                            `<button onclick="logout()" class="p-2 text-rose-400"><i data-lucide="log-out"></i></button>` :
+                            `<button onclick="loginWithGoogle()" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
                         }
                     </div>
 
@@ -442,7 +462,7 @@
                         ${[0, 1].map(idx => renderDrinkInput(idx, data[idx] || {})).join('')}
                     </div>
                     <div class="p-8 bg-white border-t border-slate-100 flex justify-between items-center sticky bottom-0 safe-pb">
-                        <button onclick="state.records['${dateStr}']=[]; closeModal();" class="text-rose-400 font-bold text-[10px] uppercase">CLEAR ALL</button>
+                        <button onclick="clearEntries('${dateStr}')" class="text-rose-400 font-bold text-[10px] uppercase">CLEAR ALL</button>
                         <button onclick="closeModal()" class="px-14 py-4 rounded-[2rem] text-white font-bold text-sm shadow-lg" style="background-color: ${state.themeColor}">DONE</button>
                     </div>
                 </div>
@@ -451,7 +471,16 @@
             lucide.createIcons();
         };
 
-        window.closeModal = () => { document.getElementById('modal').classList.add('hidden'); saveData(); render(); };
+        window.closeModal = () => { 
+            document.getElementById('modal').classList.add('hidden'); 
+            saveData(); 
+            render(); 
+        };
+
+        window.clearEntries = (dateStr) => {
+            state.records[dateStr] = [{}, {}];
+            closeModal();
+        };
 
         function renderDrinkInput(idx, d) {
             const isCustomTopping = d.topping && !TOPPING_OPTIONS.includes(d.topping);
@@ -462,8 +491,8 @@
                         <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">DRINK ${idx+1}</span>
                     </div>
                     <div class="space-y-4">
-                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntry(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
-                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntry(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntrySilently(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntrySilently(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
                         
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Ice</p>
@@ -485,14 +514,14 @@
                                 ${TOPPING_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'topping', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.topping===o && !isCustomTopping ?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.topping===o && !isCustomTopping ?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
                                 <button onclick="handleToppingInput(${idx})" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${isCustomTopping ? 'text-white' : 'bg-white text-slate-300'}" style="${isCustomTopping ? `background-color:${state.themeColor}; border-color:${state.themeColor}` : ''}">其他</button>
                             </div>
-                            ${isCustomTopping ? `<input type="text" placeholder="輸入配料名稱..." value="${d.topping}" oninput="updateEntry(${idx}, 'topping', this.value)" class="w-full px-5 py-2.5 rounded-xl bg-white border border-slate-100 text-[10px] font-bold text-slate-600 outline-none mt-1 shadow-sm">` : ''}
+                            ${isCustomTopping ? `<input type="text" placeholder="輸入配料名稱..." value="${d.topping}" oninput="updateEntrySilently(${idx}, 'topping', this.value)" class="w-full px-5 py-2.5 rounded-xl bg-white border border-slate-100 text-[10px] font-bold text-slate-600 outline-none mt-1 shadow-sm">` : ''}
                         </div>
 
                         <div class="flex items-center justify-between pt-2 border-t border-slate-100">
                             <p class="text-[9px] font-bold text-slate-300 uppercase">Price</p>
                             <div class="flex items-center gap-1 bg-white border border-slate-100 px-3 py-1.5 rounded-2xl">
                                 <span class="text-[9px] font-bold text-slate-300">$</span>
-                                <input type="number" value="${d.price || ''}" oninput="updateEntry(${idx}, 'price', this.value)" class="w-12 bg-transparent outline-none text-[11px] font-bold text-slate-600 text-right">
+                                <input type="number" value="${d.price || ''}" oninput="updateEntrySilently(${idx}, 'price', this.value)" class="w-12 bg-transparent outline-none text-[11px] font-bold text-slate-600 text-right">
                             </div>
                         </div>
                     </div>
@@ -500,6 +529,13 @@
             `;
         }
 
+        // 當輸入框改變時，只更新資料，不重新渲染 DOM 以防止失去焦點
+        window.updateEntrySilently = (idx, field, value) => {
+            if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
+            state.records[state.selectedDate][idx][field] = value;
+        };
+
+        // 按鈕類型的更新（Ice, Sugar）需要重新渲染
         window.updateEntry = (idx, field, value) => {
             if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
             state.records[state.selectedDate][idx][field] = value;
@@ -508,7 +544,6 @@
 
         window.handleToppingInput = (idx) => {
             if (!state.records[state.selectedDate]) state.records[state.selectedDate] = [{}, {}];
-            // Set to empty string if clicking "其他" to trigger the input field
             state.records[state.selectedDate][idx].topping = " "; 
             refreshModalContent();
         };
