@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
 
-    <!-- App Icons (GitHub icon.png) -->
+    <!-- App Icons -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     
@@ -119,7 +119,7 @@
             chartMode: 'store',
             selectedDate: null,
             customHex: '#A7C7E7',
-            syncStatus: 'idle' // 'idle', 'syncing', 'synced', 'error'
+            syncStatus: 'idle'
         };
 
         const MONTH_NAMES = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
@@ -448,7 +448,9 @@
                         <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">MONTHLY BUDGET</p>
                         <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
                             <span class="text-slate-300 font-bold text-xs">$</span>
-                            <input type="number" value="${state.budget}" onchange="state.budget=this.value; saveData(); render();" class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
+                            <input type="number" id="budget-input" value="${state.budget}" 
+                                onchange="handleBudgetChange(this.value)" 
+                                class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
                         </div>
                     </div>
 
@@ -478,6 +480,13 @@
             `;
             lucide.createIcons();
         }
+
+        window.handleBudgetChange = (val) => {
+            state.budget = Number(val);
+            saveData();
+            // 重新渲染以更新 Home 的預算比例
+            render();
+        };
 
         window.switchTab = (t) => { state.activeTab = t; render(); };
         window.setChartMode = (m) => { state.chartMode = m; render(); };
