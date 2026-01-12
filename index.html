@@ -69,19 +69,23 @@
         </main>
 
         <!-- Bottom Nav -->
-        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[85%] max-w-xs safe-pb">
-            <div class="glass-nav border border-white/50 h-16 rounded-full shadow-2xl flex items-center justify-around px-4">
+        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm safe-pb">
+            <div class="glass-nav border border-white/50 h-16 rounded-full shadow-2xl flex items-center justify-around px-2">
                 <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-home">
                     <i data-lucide="home" class="w-5 h-5"></i>
-                    <span class="text-[9px] font-bold">HOME</span>
+                    <span class="text-[9px] font-bold uppercase">Home</span>
+                </button>
+                <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-history">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                    <span class="text-[9px] font-bold uppercase">Log</span>
                 </button>
                 <button onclick="switchTab('stats')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-stats">
                     <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                    <span class="text-[9px] font-bold">STATS</span>
+                    <span class="text-[9px] font-bold uppercase">Stats</span>
                 </button>
                 <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 transition-all" id="nav-settings">
                     <i data-lucide="settings" class="w-5 h-5"></i>
-                    <span class="text-[9px] font-bold">SETS</span>
+                    <span class="text-[9px] font-bold uppercase">Sets</span>
                 </button>
             </div>
         </nav>
@@ -119,7 +123,8 @@
             chartMode: 'store',
             selectedDate: null,
             customHex: '#A7C7E7',
-            syncStatus: 'idle'
+            syncStatus: 'idle',
+            historyFilter: 'all' // 修正：預設改為 'all'
         };
 
         const MONTH_NAMES = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
@@ -223,6 +228,34 @@
             };
         }
 
+        function getHistoryRecords() {
+            const all = [];
+            Object.entries(state.records).forEach(([date, drinks]) => {
+                drinks.forEach(d => {
+                    if (d && (d.item || d.store)) all.push({ ...d, date });
+                });
+            });
+            all.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (state.historyFilter === 'all') return all;
+
+            const now = new Date();
+            return all.filter(r => {
+                const rDate = new Date(r.date);
+                if (state.historyFilter === 'week') {
+                    const diff = (now - rDate) / (1000 * 60 * 60 * 24);
+                    return diff <= 7;
+                }
+                if (state.historyFilter === 'month') {
+                    return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+                }
+                if (state.historyFilter === 'year') {
+                    return rDate.getFullYear() === now.getFullYear();
+                }
+                return true;
+            });
+        }
+
         function getYearlyChartData() {
             const allDrinks = Object.values(state.records).flat().filter(d => d && (d.item || d.store));
             const key = state.chartMode;
@@ -246,7 +279,7 @@
             document.getElementById('logo-icon').style.backgroundColor = state.themeColor;
             document.getElementById('logo-text').style.color = state.themeColor;
             
-            ['home', 'stats', 'settings'].forEach(t => {
+            ['home', 'history', 'stats', 'settings'].forEach(t => {
                 const btn = document.getElementById(`nav-${t}`);
                 if (state.activeTab === t) {
                     btn.style.color = state.themeColor;
@@ -260,6 +293,7 @@
             });
 
             if (state.activeTab === 'home') renderHome(container);
+            else if (state.activeTab === 'history') renderHistory(container);
             else if (state.activeTab === 'stats') renderStats(container);
             else if (state.activeTab === 'settings') renderSettings(container);
 
@@ -336,6 +370,65 @@
                 grid.appendChild(day);
             }
         }
+
+        function renderHistory(container) {
+            const hRecords = getHistoryRecords();
+            const filters = [
+                { id: 'week', label: 'WEEK' },
+                { id: 'month', label: 'MONTH' },
+                { id: 'year', label: 'YEAR' },
+                { id: 'all', label: 'ALL' }
+            ];
+
+            container.innerHTML = `
+                <div class="space-y-6 animate-in fade-in duration-500">
+                    <div class="flex items-center justify-center">
+                         <div class="flex bg-white p-1 rounded-full border border-slate-50 shadow-sm w-full">
+                            ${filters.map(f => `
+                                <button onclick="setHistoryFilter('${f.id}')" 
+                                    class="flex-1 py-3 text-[10px] font-bold rounded-full transition-all ${state.historyFilter === f.id ? 'text-white shadow-md' : 'text-slate-300'}" 
+                                    style="${state.historyFilter === f.id ? `background-color: ${state.themeColor}` : ''}">
+                                    ${f.label}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        ${hRecords.length > 0 ? hRecords.map(r => `
+                            <div class="bg-white p-5 rounded-[2rem] border border-slate-50 shadow-sm flex items-center gap-4 transition-transform active:scale-95" onclick="openModal('${r.date}')">
+                                <div class="w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0" style="background-color: ${state.themeColor}15">
+                                    <span class="text-[8px] font-bold text-slate-400 uppercase">${new Date(r.date).toLocaleString('en-US', { month: 'short' })}</span>
+                                    <span class="text-sm font-bold" style="color: ${state.themeColor}">${new Date(r.date).getDate()}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-bold text-slate-700 truncate">${r.item || 'Untitled Drink'}</h4>
+                                    <p class="text-[10px] font-bold text-slate-300 uppercase truncate">${r.store || 'Unknown Store'}</p>
+                                    <div class="flex gap-2 mt-1">
+                                        <span class="text-[8px] px-2 py-0.5 bg-slate-50 rounded-full text-slate-400 font-bold">${r.ice || '冰量'}</span>
+                                        <span class="text-[8px] px-2 py-0.5 bg-slate-50 rounded-full text-slate-400 font-bold">${r.sugar || '甜度'}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-slate-600">$${r.price || 0}</p>
+                                    <i data-lucide="chevron-right" class="w-3 h-3 text-slate-200 ml-auto"></i>
+                                </div>
+                            </div>
+                        `).join('') : `
+                            <div class="py-20 flex flex-col items-center justify-center opacity-20">
+                                <i data-lucide="ghost" class="w-12 h-12 mb-2"></i>
+                                <p class="text-[10px] font-bold uppercase tracking-widest">No records found</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.setHistoryFilter = (f) => {
+            state.historyFilter = f;
+            render();
+        };
 
         window.changeMonth = (dir) => {
             state.activeMonth = (state.activeMonth + dir + 12) % 12;
@@ -484,7 +577,6 @@
         window.handleBudgetChange = (val) => {
             state.budget = Number(val);
             saveData();
-            // 重新渲染以更新 Home 的預算比例
             render();
         };
 
