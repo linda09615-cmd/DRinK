@@ -21,14 +21,23 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
-            /* 使用 PingFang TC 與 Noto Sans TC 確保中文清晰且現代感 */
-            font-family: 'Fredoka', "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            background-color: #f8fafc;
-            overflow-x: hidden;
-            width: 100%;
-            height: 100%;
-        }
+  /* 優先順序：自定義圓體 > macOS/iOS 圓體 > Windows 圓體 > 系統預設 */
+  font-family: 
+    "PingFang TC", 
+    "PingFang HK", 
+    "PingFang SC", 
+    "Heiti TC", 
+    "Microsoft JhengHei", 
+    "Rounded Mplus 1c", 
+    "Gulim", 
+    sans-serif;
+}
+
+/* 如果有載入 Google Fonts 的圓體 */
+.rounded-text {
+  font-family: 'Noto Sans HK', sans-serif; /* 註：Noto Sans 本身偏黑體，圓體需另外載入 */
+  font-weight: 400;
+}
         #app {
             height: 100%;
             overflow-y: auto;
