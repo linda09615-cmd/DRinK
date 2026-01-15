@@ -17,18 +17,16 @@
     <link rel="apple-touch-icon" href="icon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
-  font-family:
-    'Hoefler Text',
-    "PingFang TC", 
-    "PingFang HK", 
-    "PingFang SC", 
-    "Rounded Mplus 1c", 
-    sans-serif;
-}
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+            width: 100%;
+            height: 100%;
+        }
         #app {
             height: 100%;
             overflow-y: auto;
@@ -53,9 +51,11 @@
         .font-bold {
             font-weight: 700;
         }
+
+        /* 修復月曆格子大小不一的核心樣式 */
         .calendar-day {
-            aspect-ratio: 1 / 1.1;
-            min-height: 85px;
+            aspect-ratio: 1 / 1.1; /* 保持固定比例 */
+            min-height: 85px;      /* 確保在無內容時也有固定高度 */
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -64,13 +64,13 @@
         }
 
         .icon-row {
-            margin-top: auto;
-            height: 24px;
+            margin-top: auto;      /* 推到底部 */
+            height: 24px;          /* 固定圖示區域高度，避免被撐開 */
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 2px;
-            overflow: hidden;
+            overflow: hidden;      /* 若飲料過多，隱藏超出部分而非撐開格子 */
         }
     </style>
 </head>
@@ -180,14 +180,10 @@
         window.loginWithGoogle = async () => {
             try {
                 await signInWithPopup(auth, googleProvider);
-            } catch (err) {
-                console.error("Google Auth Error:", err);
-            }
+            } catch (err) { console.error("Google Auth Error:", err); }
         };
 
-        window.logout = async () => {
-            await signOut(auth);
-        };
+        window.logout = async () => { await signOut(auth); };
 
         function listenToData() {
             state.syncStatus = 'syncing';
@@ -225,9 +221,7 @@
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
                 state.syncStatus = 'synced';
-            } catch (err) {
-                state.syncStatus = 'error';
-            }
+            } catch (err) { state.syncStatus = 'error'; }
             render();
         }
 
@@ -260,9 +254,7 @@
                 });
             });
             all.sort((a, b) => new Date(b.date) - new Date(a.date));
-
             if (state.historyFilter === 'all') return all;
-
             const now = new Date();
             return all.filter(r => {
                 const rDate = new Date(r.date);
@@ -382,14 +374,17 @@
             const grid = document.getElementById('calendar-grid');
             const firstDay = new Date(2026, state.activeMonth, 1).getDay();
             const daysInMonth = new Date(2026, state.activeMonth + 1, 0).getDate();
-            for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className: 'aspect-square bg-slate-50/5'}));
+            for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className: 'calendar-day bg-slate-50/5 border-r border-b border-slate-50'}));
             for (let d = 1; d <= daysInMonth; d++) {
                 const day = document.createElement('div');
                 const dStr = `2026-${String(state.activeMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dr = (state.records[dStr] || []).filter(x => x && (x.item || x.store));
-                day.className = 'aspect-square p-2 border-r border-b border-slate-50 cursor-pointer hover:bg-slate-50/50 relative';
-                day.innerHTML = `<span class="absolute top-2 left-2 text-[9px] font-bold text-slate-300">${d}</span>
-                                <div class="mt-4 flex flex-wrap gap-1 justify-center">${dr.map(() => `<div style="color: ${state.themeColor}"><i data-lucide="cup-soda" style="width:10px"></i></div>`).join('')}</div>`;
+                day.className = 'calendar-day border-r border-b border-slate-50 cursor-pointer hover:bg-slate-50/50 relative';
+                day.innerHTML = `
+                    <span class="text-[9px] font-bold text-slate-300">${d}</span>
+                    <div class="icon-row">
+                        ${dr.map(() => `<div style="color: ${state.themeColor}"><i data-lucide="cup-soda" style="width:12px; height:12px;"></i></div>`).join('')}
+                    </div>`;
                 day.onclick = () => openModal(dStr);
                 grid.appendChild(day);
             }
@@ -397,13 +392,7 @@
 
         function renderHistory(container) {
             const hRecords = getHistoryRecords();
-            const filters = [
-                { id: 'week', label: 'WEEK' },
-                { id: 'month', label: 'MONTH' },
-                { id: 'year', label: 'YEAR' },
-                { id: 'all', label: 'ALL' }
-            ];
-
+            const filters = [{id:'week',label:'WEEK'},{id:'month',label:'MONTH'},{id:'year',label:'YEAR'},{id:'all',label:'ALL'}];
             container.innerHTML = `
                 <div class="space-y-6 animate-in fade-in duration-500">
                     <div class="flex items-center justify-center">
@@ -417,7 +406,6 @@
                             `).join('')}
                         </div>
                     </div>
-
                     <div class="space-y-3">
                         ${hRecords.length > 0 ? hRecords.map(r => `
                             <div class="bg-white p-5 rounded-[2rem] border border-slate-50 shadow-sm flex flex-col gap-2 transition-transform active:scale-95" onclick="openModal('${r.date}')">
@@ -459,15 +447,8 @@
             `;
         }
 
-        window.setHistoryFilter = (f) => {
-            state.historyFilter = f;
-            render();
-        };
-
-        window.changeMonth = (dir) => {
-            state.activeMonth = (state.activeMonth + dir + 12) % 12;
-            render();
-        };
+        window.setHistoryFilter = (f) => { state.historyFilter = f; render(); };
+        window.changeMonth = (dir) => { state.activeMonth = (state.activeMonth + dir + 12) % 12; render(); };
 
         function renderStats(container) {
             const chartData = getYearlyChartData();
@@ -485,7 +466,6 @@
                             <p class="text-sm font-bold text-slate-600 truncate w-full">N/A</p>
                         </div>
                     </div>
-
                     <div class="bg-white p-8 rounded-[3.5rem] border border-slate-50 shadow-sm space-y-8">
                         <div class="flex flex-col gap-6 items-center">
                             <div class="flex items-center gap-2">
@@ -501,7 +481,6 @@
                                 </button>
                             </div>
                         </div>
-
                         ${chartData.length > 0 ? `
                             <div class="flex justify-center py-4">
                                 <div class="relative w-52 h-52">
@@ -539,14 +518,8 @@
 
         function renderSettings(container) {
             const isGoogleUser = state.user && !state.user.isAnonymous;
-            const syncUI = {
-                idle: { text: '尚未同步', color: 'text-slate-300' },
-                syncing: { text: '同步中...', color: 'text-sky-400 animate-pulse' },
-                synced: { text: '已同步', color: 'text-emerald-400' },
-                error: { text: '同步錯誤', color: 'text-rose-400' }
-            };
+            const syncUI = { idle: { text: '尚未同步', color: 'text-slate-300' }, syncing: { text: '同步中...', color: 'text-sky-400 animate-pulse' }, synced: { text: '已同步', color: 'text-emerald-400' }, error: { text: '同步錯誤', color: 'text-rose-400' } };
             const currentSync = syncUI[state.syncStatus];
-
             container.innerHTML = `
                 <div class="space-y-6 animate-in fade-in duration-500">
                     <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col gap-4">
@@ -554,33 +527,24 @@
                             <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">CLOUD SYNC</p>
                             <div class="flex items-center gap-2">
                                 <span class="text-[8px] font-bold uppercase ${currentSync.color}">${currentSync.text}</span>
-                                ${isGoogleUser ? 
-                                    `<button onclick="logout()" class="p-2 text-rose-400"><i data-lucide="log-out" class="w-4 h-4"></i></button>` :
-                                    `<button onclick="loginWithGoogle()" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`
-                                }
+                                ${isGoogleUser ? `<button onclick="logout()" class="p-2 text-rose-400"><i data-lucide="log-out" class="w-4 h-4"></i></button>` : `<button onclick="loginWithGoogle()" class="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-500">LOGIN</button>`}
                             </div>
                         </div>
-                        ${isGoogleUser ? `
-                            <div class="flex items-center gap-3 p-4 bg-slate-50/50 rounded-[1.5rem] border border-slate-100">
+                        ${isGoogleUser ? `<div class="flex items-center gap-3 p-4 bg-slate-50/50 rounded-[1.5rem] border border-slate-100">
                                 <img src="${state.user.photoURL || ''}" class="w-8 h-8 rounded-full border border-white shadow-sm" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(state.user.displayName || 'U')}&background=random'">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-[10px] font-bold text-slate-700 truncate">${state.user.displayName || 'User'}</p>
                                     <p class="text-[8px] text-slate-300 truncate">${state.user.email}</p>
                                 </div>
-                            </div>
-                        ` : ''}
+                            </div>` : ''}
                     </div>
-
                     <div class="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between">
                         <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">MONTHLY BUDGET</p>
                         <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
                             <span class="text-slate-300 font-bold text-xs">$</span>
-                            <input type="number" id="budget-input" value="${state.budget}" 
-                                onchange="handleBudgetChange(this.value)" 
-                                class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
+                            <input type="number" id="budget-input" value="${state.budget}" onchange="handleBudgetChange(this.value)" class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
                         </div>
                     </div>
-
                     <div class="bg-white p-8 rounded-[3.5rem] border border-slate-50 shadow-sm space-y-6">
                         <div class="flex items-center justify-center gap-2">
                             <i data-lucide="palette" class="w-4 h-4" style="color: ${state.themeColor}"></i>
@@ -608,12 +572,7 @@
             lucide.createIcons();
         }
 
-        window.handleBudgetChange = (val) => {
-            state.budget = Number(val);
-            saveData();
-            render();
-        };
-
+        window.handleBudgetChange = (val) => { state.budget = Number(val); saveData(); render(); };
         window.switchTab = (t) => { state.activeTab = t; render(); };
         window.setChartMode = (m) => { state.chartMode = m; render(); };
         window.updateTheme = (c) => { state.themeColor = c; state.customHex = c; saveData(); render(); };
@@ -652,16 +611,8 @@
             lucide.createIcons();
         };
 
-        window.closeModal = () => { 
-            document.getElementById('modal').classList.add('hidden'); 
-            saveData(); 
-            render(); 
-        };
-
-        window.clearEntries = (dateStr) => {
-            state.records[dateStr] = [{}, {}];
-            closeModal();
-        };
+        window.closeModal = () => { document.getElementById('modal').classList.add('hidden'); saveData(); render(); };
+        window.clearEntries = (dateStr) => { state.records[dateStr] = [{}, {}]; closeModal(); };
 
         function renderDrinkInput(idx, d) {
             const isCustomTopping = d.topping && !TOPPING_OPTIONS.includes(d.topping);
@@ -674,35 +625,30 @@
                     <div class="space-y-4">
                         <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntrySilently(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
                         <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntrySilently(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
-                        
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Ice</p>
                             <div class="flex flex-wrap gap-1.5">
-                                ${ICE_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'ice', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.ice===o?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.ice===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                                ${ICE_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'ice', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.ice===o?'text-white':'bg-white text-slate-300'}" style="${d.ice===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
                             </div>
                         </div>
-
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Sugar</p>
                             <div class="flex flex-wrap gap-1.5">
-                                ${SUGAR_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'sugar', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.sugar===o?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.sugar===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                                ${SUGAR_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'sugar', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.sugar===o?'text-white':'bg-white text-slate-300'}" style="${d.sugar===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
                             </div>
                         </div>
-
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Topping</p>
                             <div class="flex flex-wrap gap-1.5 mb-2">
-                                ${TOPPING_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'topping', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.topping===o && !isCustomTopping ?'text-white':'bg-white text-slate-300 hover:text-slate-400'}" style="${d.topping===o && !isCustomTopping ?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
+                                ${TOPPING_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'topping', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.topping===o && !isCustomTopping ?'text-white':'bg-white text-slate-300'}" style="${d.topping===o && !isCustomTopping ?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}
                                 <button onclick="handleToppingInput(${idx})" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${isCustomTopping ? 'text-white' : 'bg-white text-slate-300'}" style="${isCustomTopping ? `background-color:${state.themeColor}; border-color:${state.themeColor}` : ''}">其他</button>
                             </div>
                             ${isCustomTopping ? `<input type="text" placeholder="輸入配料名稱..." value="${d.topping}" oninput="updateEntrySilently(${idx}, 'topping', this.value)" class="w-full px-5 py-2.5 rounded-xl bg-white border border-slate-100 text-[10px] font-bold text-slate-600 outline-none mt-1 shadow-sm">` : ''}
                         </div>
-
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-1 uppercase">Note</p>
                             <input type="text" placeholder="" value="${d.note || ''}" oninput="updateEntrySilently(${idx}, 'note', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none shadow-sm">
                         </div>
-
                         <div class="flex items-center justify-between pt-2 border-t border-slate-100">
                             <p class="text-[9px] font-bold text-slate-300 uppercase">Price</p>
                             <div class="flex items-center gap-1 bg-white border border-slate-100 px-3 py-1.5 rounded-2xl">
