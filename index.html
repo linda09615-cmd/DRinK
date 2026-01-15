@@ -20,7 +20,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, Hoefler Text, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
             background-color: #f8fafc;
             overflow-x: hidden;
@@ -50,27 +50,6 @@
         
         .font-bold {
             font-weight: 700;
-        }
-
-        /* 修復月曆格子大小不一的核心樣式 */
-        .calendar-day {
-            aspect-ratio: 1 / 1.1; /* 保持固定比例 */
-            min-height: 85px;      /* 確保在無內容時也有固定高度 */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            padding: 8px;
-            overflow: hidden;
-        }
-
-        .icon-row {
-            margin-top: auto;      /* 推到底部 */
-            height: 24px;          /* 固定圖示區域高度，避免被撐開 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 2px;
-            overflow: hidden;      /* 若飲料過多，隱藏超出部分而非撐開格子 */
         }
     </style>
 </head>
