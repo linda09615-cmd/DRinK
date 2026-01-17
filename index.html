@@ -510,73 +510,46 @@
             render();
         };
 
-        function renderStats(container) {
-            const chartData = getYearlyChartData();
-            container.innerHTML = `
-                <div class="space-y-4 animate-in fade-in duration-500">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
-                            <i data-lucide="store" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY FAVORITE STORE</p>
-                            <p class="text-sm font-bold text-slate-600 truncate w-full">${chartData.find(x => true)?.label || 'N/A'}</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
-                            <i data-lucide="heart" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY FAVORITE ITEM</p>
-                            <p class="text-sm font-bold text-slate-600 truncate w-full">N/A</p>
-                        </div>
+function renderStats(container) {
+    // ... 前段統計小卡片代碼 ...
+
+    container.innerHTML = `
+        <!-- ... -->
+        <div class="bg-white p-7 rounded-[3.5rem] ...">
+            <!-- 更新重點：將切換欄位放置在卡片最上方 -->
+            <div class="pt-2">
+                 <div class="segmented-control">
+                    <!-- 動態計算滑塊位置 -->
+                    <div class="segmented-slider" style="transform: translateX(${state.chartMode === 'item' ? '100%' : '0%'})"></div>
+                    
+                    <!-- 店家切換：加入 store icon 與英文 Store -->
+                    <div class="segmented-item ${state.chartMode === 'store' ? 'active' : ''}" onclick="setChartMode('store')">
+                        <i data-lucide="store" class="w-3.5 h-3.5"></i>
+                        <span>Store</span>
                     </div>
-
-                    <div class="bg-white p-8 rounded-[3.5rem] border border-slate-50 shadow-sm space-y-8">
-                        <div class="flex flex-col gap-6 items-center">
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="trending-up" class="w-4 h-4" style="color: ${state.themeColor}"></i>
-                                <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">YEARLY DISTRIBUTION</p>
-                            </div>
-                            <div class="flex bg-slate-50 p-1 rounded-3xl border border-slate-100 w-full max-w-[240px]">
-                                <button onclick="setChartMode('store')" class="flex-1 py-3 text-[10px] font-bold rounded-[1.25rem] transition-all flex items-center justify-center gap-2 ${state.chartMode === 'store' ? 'bg-white shadow-sm' : 'text-slate-300'}" style="${state.chartMode === 'store' ? `color:${state.themeColor}` : ''}">
-                                    <i data-lucide="store" class="w-3.5 h-3.5"></i> STORES
-                                </button>
-                                <button onclick="setChartMode('item')" class="flex-1 py-3 text-[10px] font-bold rounded-[1.25rem] transition-all flex items-center justify-center gap-2 ${state.chartMode === 'item' ? 'bg-white shadow-sm' : 'text-slate-300'}" style="${state.chartMode === 'item' ? `color:${state.themeColor}` : ''}">
-                                    <i data-lucide="heart" class="w-3.5 h-3.5"></i> ITEMS
-                                </button>
-                            </div>
-                        </div>
-
-                        ${chartData.length > 0 ? `
-                            <div class="flex justify-center py-4">
-                                <div class="relative w-52 h-52">
-                                    <svg viewBox="0 0 200 200" class="w-full h-full">
-                                        <circle cx="100" cy="100" r="85" fill="none" stroke="#f8fafc" stroke-width="20" />
-                                        ${chartData.reduce((acc, item) => {
-                                            const offset = acc.currentOffset; acc.currentOffset += item.percent;
-                                            const dash = 2 * Math.PI * 85;
-                                            return { ...acc, html: acc.html + `<circle cx="100" cy="100" r="85" fill="none" stroke="${item.color}" stroke-width="20" stroke-dasharray="${dash}" stroke-dashoffset="${dash * (1 - item.percent / 100)}" style="transform: rotate(${offset * 3.6 - 90}deg); transform-origin: center;" />` };
-                                        }, { html: '', currentOffset: 0 }).html}
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="space-y-2 pt-6">
-                                ${chartData.map((item, idx) => `
-                                    <div class="flex items-center gap-4 p-5 bg-slate-50/50 rounded-[2.25rem] border border-slate-50">
-                                        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[10px] font-bold text-slate-300 border" style="border-color: ${item.color}">${idx+1}</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex justify-between mb-1">
-                                                <h4 class="text-sm font-bold text-slate-700 truncate">${item.label}</h4>
-                                                <span class="text-[10px] font-bold text-slate-400">${item.count} Cups</span>
-                                            </div>
-                                            <div class="h-1.5 w-full bg-white rounded-full overflow-hidden border border-slate-100/50">
-                                                <div class="h-full" style="width: ${item.percent}%; background-color: ${item.color}"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : '<div class="py-20 text-center text-slate-200 font-bold uppercase text-[10px]">No data</div>'}
+                    
+                    <!-- 品項切換：加入 cup-soda icon 與英文 Item -->
+                    <div class="segmented-item ${state.chartMode === 'item' ? 'active' : ''}" onclick="setChartMode('item')">
+                        <i data-lucide="cup-soda" class="w-3.5 h-3.5"></i>
+                        <span>Item</span>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+
+            <!-- 圖表標題也改為英文說明 -->
+            <div class="flex flex-col gap-1 items-center">
+                <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                    TOP ${state.chartMode.toUpperCase()}S
+                </p>
+                <p class="text-[9px] font-bold text-slate-200">Total ${yStats.count} Cups in ${state.activeYear}</p>
+            </div>
+
+            <!-- 圖表內容 ... -->
+        </div>
+    `;
+    // 重新觸發 Icon 渲染
+    lucide.createIcons();
+}
 
         function renderSettings(container) {
             const isGoogleUser = state.user && !state.user.isAnonymous;
