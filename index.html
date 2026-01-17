@@ -69,6 +69,7 @@
         .segmented-item.active {
             color: #1e293b;
         }
+        /* 修正滑塊寬度計算 */
         .segmented-slider {
             position: absolute;
             top: 3px;
@@ -116,7 +117,14 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            line-height: 1.2; /* 確保文字在標籤內垂直居中 */
+            line-height: 1.2;
+        }
+
+        /* 列表項目垂直居中對齊修正 */
+        .align-middle-flex {
+            display: flex;
+            align-items: center;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -192,7 +200,7 @@
             themeColor: '#0C2764',
             monthlyBudgets: {},
             chartMode: 'store', 
-            historyFilter: 'month', 
+            historyFilter: 'all', // 預設改為 all
             historyYear: new Date().getFullYear(),
             selectedDate: null,
             lastSync: null
@@ -472,9 +480,10 @@
                                 </div>
 
                                 <div class="space-y-3">
-                                    <div class="flex items-center gap-2 flex-wrap">
+                                    <!-- 修正：店家、品項與點點垂直對齊 -->
+                                    <div class="flex items-center gap-2 flex-wrap align-middle-flex">
                                         <span class="text-sm font-bold text-slate-700">${r.store || '未填寫'}</span>
-                                        <div class="w-1 h-1 rounded-full bg-slate-200 shrink-0"></div>
+                                        <span class="text-slate-300 font-bold text-sm">·</span>
                                         <span class="text-sm font-bold text-slate-500">${r.item || '未填寫'}</span>
                                     </div>
 
@@ -561,28 +570,30 @@
                             </div>
                         </div>
 
+                        <!-- 修正：切換鈕 Icon 與文字對齊 -->
                         <div class="segmented-control max-w-[240px]">
                             <div class="segmented-slider" style="width: calc(50% - 3px); transform: translateX(${state.chartMode === 'item' ? '100%' : '0%'})"></div>
-                            <div class="segmented-item ${state.chartMode === 'store' ? 'active' : ''}" onclick="setChartMode('store')">
+                            <div class="segmented-item ${state.chartMode === 'store' ? 'active' : ''} align-middle-flex" onclick="setChartMode('store')">
                                 <i data-lucide="store" class="w-3.5 h-3.5"></i>
-                                <span>Store</span>
+                                <span class="leading-none">Store</span>
                             </div>
-                            <div class="segmented-item ${state.chartMode === 'item' ? 'active' : ''}" onclick="setChartMode('item')">
+                            <div class="segmented-item ${state.chartMode === 'item' ? 'active' : ''} align-middle-flex" onclick="setChartMode('item')">
                                 <i data-lucide="cup-soda" class="w-3.5 h-3.5"></i>
-                                <span>Item</span>
+                                <span class="leading-none">Item</span>
                             </div>
                         </div>
 
                         <div class="w-full space-y-3">
                             ${chartData.length > 0 ? chartData.map((item, idx) => `
-                                <div class="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                                <!-- 修正：點點與文字垂直居中對齊 -->
+                                <div class="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50 align-middle-flex">
                                     <div class="flex items-center gap-3 overflow-hidden">
-                                        <div class="w-2 h-2 rounded-full shrink-0" style="background-color: ${getStepColor(state.themeColor, idx, chartData.length)}"></div>
-                                        <span class="text-[11px] font-bold text-slate-600 truncate">${item.label}</span>
+                                        <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${getStepColor(state.themeColor, idx, chartData.length)}"></div>
+                                        <span class="text-[11px] font-bold text-slate-600 truncate leading-none">${item.label}</span>
                                     </div>
                                     <div class="flex items-center gap-3 shrink-0">
-                                        <span class="text-[10px] font-bold text-slate-300">${item.count}</span>
-                                        <span class="text-[10px] font-bold text-slate-600 w-10 text-right">${Math.round(item.percent)}%</span>
+                                        <span class="text-[10px] font-bold text-slate-300 leading-none">${item.count}</span>
+                                        <span class="text-[10px] font-bold text-slate-600 w-10 text-right leading-none">${Math.round(item.percent)}%</span>
                                     </div>
                                 </div>
                             `).join('') : `<div class="py-10 text-center text-slate-200 font-bold uppercase text-[10px]">No data</div>`}
