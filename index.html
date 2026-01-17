@@ -28,6 +28,13 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
+        
+        input {
+            line-height: normal !important;
+            display: flex;
+            align-items: center;
+        }
+
         .glass-nav {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
@@ -42,12 +49,13 @@
 
         .segmented-control {
             background-color: #f1f5f9;
-            padding: 3px;
+            padding: 4px;
             border-radius: 9999px;
             display: flex;
             position: relative;
             width: 100%;
             margin: 0 auto;
+            overflow: hidden;
         }
         .segmented-item {
             flex: 1;
@@ -69,16 +77,16 @@
         .segmented-item.active {
             color: #1e293b;
         }
-        /* 修正滑塊寬度計算 */
         .segmented-slider {
             position: absolute;
-            top: 3px;
-            bottom: 3px;
+            top: 4px;
+            bottom: 4px;
             background-color: white;
             border-radius: 9999px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
             z-index: 5;
+            left: 0;
         }
 
         .calendar-cell {
@@ -120,11 +128,14 @@
             line-height: 1.2;
         }
 
-        /* 列表項目垂直居中對齊修正 */
-        .align-middle-flex {
+        .stats-list-item {
             display: flex;
             align-items: center;
-            line-height: 1.2;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background-color: rgba(241, 245, 249, 0.5);
+            border-radius: 1.25rem;
+            border: 1px solid #f1f5f9;
         }
     </style>
 </head>
@@ -200,7 +211,7 @@
             themeColor: '#0C2764',
             monthlyBudgets: {},
             chartMode: 'store', 
-            historyFilter: 'all', // 預設改為 all
+            historyFilter: 'all', 
             historyYear: new Date().getFullYear(),
             selectedDate: null,
             lastSync: null
@@ -437,12 +448,14 @@
 
             const filterOptions = [{ id: 'week', label: 'Week' }, { id: 'month', label: 'Month' }, { id: 'year', label: 'Year' }, { id: 'all', label: 'All' }];
             const activeIdx = filterOptions.findIndex(o => o.id === state.historyFilter);
+            const sliderWidth = `calc((100% - 8px) / ${filterOptions.length})`;
+            const sliderTransform = `translateX(calc(${activeIdx * 100}% + 4px))`;
 
             container.innerHTML = `
                 <div class="space-y-6 animate-in fade-in duration-500">
                     <div class="flex flex-col gap-4">
                          <div class="segmented-control max-w-xs">
-                            <div class="segmented-slider" style="width: 25%; transform: translateX(${activeIdx * 100}%)"></div>
+                            <div class="segmented-slider" style="width: ${sliderWidth}; transform: ${sliderTransform}"></div>
                             ${filterOptions.map(opt => `
                                 <div class="segmented-item ${state.historyFilter === opt.id ? 'active' : ''}" onclick="setHistoryFilter('${opt.id}')">
                                     <span>${opt.label}</span>
@@ -480,11 +493,10 @@
                                 </div>
 
                                 <div class="space-y-3">
-                                    <!-- 修正：店家、品項與點點垂直對齊 -->
-                                    <div class="flex items-center gap-2 flex-wrap align-middle-flex">
-                                        <span class="text-sm font-bold text-slate-700">${r.store || '未填寫'}</span>
-                                        <span class="text-slate-300 font-bold text-sm">·</span>
-                                        <span class="text-sm font-bold text-slate-500">${r.item || '未填寫'}</span>
+                                    <div class="flex items-center gap-2 flex-wrap text-sm font-bold">
+                                        <span class="text-slate-700 leading-none">${r.store || '未填寫'}</span>
+                                        <span class="text-slate-300 leading-none mb-[1px]">·</span>
+                                        <span class="text-slate-500 leading-none">${r.item || '未填寫'}</span>
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-1.5">
@@ -503,7 +515,7 @@
                                         
                                         ${r.note ? `
                                             <div class="flex-1 min-w-[50px] flex items-center h-full">
-                                                <p class="text-[10px] text-slate-400 font-medium border-l-2 border-slate-100 pl-2 mt-[1px] truncate leading-normal" title="${r.note}">${r.note}</p>
+                                                <p class="text-[10px] text-slate-400 font-medium border-l-2 border-slate-100 pl-2 mt-[1px] truncate leading-normal">${r.note}</p>
                                             </div>
                                         ` : ''}
                                     </div>
@@ -544,17 +556,17 @@
                         <div class="bg-white p-4 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
                             <i data-lucide="award" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
                             <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY STORE</p>
-                            <p class="text-[10px] font-bold text-slate-600 truncate w-full">${yStats.favStore}</p>
+                            <p class="text-[10px] font-bold text-slate-600 truncate w-full leading-tight">${yStats.favStore}</p>
                         </div>
                         <div class="bg-white p-4 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
                             <i data-lucide="star" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
                             <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY ITEM</p>
-                            <p class="text-[10px] font-bold text-slate-600 truncate w-full">${yStats.favItem}</p>
+                            <p class="text-[10px] font-bold text-slate-600 truncate w-full leading-tight">${yStats.favItem}</p>
                         </div>
                         <div class="bg-white p-4 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center text-center">
                             <i data-lucide="cup-soda" class="w-4 h-4 mb-2" style="color: ${state.themeColor}"></i>
                             <p class="text-[8px] font-bold text-slate-300 uppercase">YEARLY CUPS</p>
-                            <p class="text-[10px] font-bold text-slate-600 truncate w-full">${yStats.count}</p>
+                            <p class="text-[10px] font-bold text-slate-600 truncate w-full leading-tight">${yStats.count}</p>
                         </div>
                     </div>
 
@@ -570,28 +582,26 @@
                             </div>
                         </div>
 
-                        <!-- 修正：切換鈕 Icon 與文字對齊 -->
                         <div class="segmented-control max-w-[240px]">
-                            <div class="segmented-slider" style="width: calc(50% - 3px); transform: translateX(${state.chartMode === 'item' ? '100%' : '0%'})"></div>
-                            <div class="segmented-item ${state.chartMode === 'store' ? 'active' : ''} align-middle-flex" onclick="setChartMode('store')">
-                                <i data-lucide="store" class="w-3.5 h-3.5"></i>
+                            <div class="segmented-slider" style="width: calc(50% - 4px); transform: translateX(${state.chartMode === 'item' ? 'calc(100% + 4px)' : '4px'})"></div>
+                            <div class="segmented-item ${state.chartMode === 'store' ? 'active' : ''}" onclick="setChartMode('store')">
+                                <i data-lucide="store" class="w-3.5 h-3.5 mb-[1px]"></i>
                                 <span class="leading-none">Store</span>
                             </div>
-                            <div class="segmented-item ${state.chartMode === 'item' ? 'active' : ''} align-middle-flex" onclick="setChartMode('item')">
-                                <i data-lucide="cup-soda" class="w-3.5 h-3.5"></i>
+                            <div class="segmented-item ${state.chartMode === 'item' ? 'active' : ''}" onclick="setChartMode('item')">
+                                <i data-lucide="cup-soda" class="w-3.5 h-3.5 mb-[1px]"></i>
                                 <span class="leading-none">Item</span>
                             </div>
                         </div>
 
                         <div class="w-full space-y-3">
                             ${chartData.length > 0 ? chartData.map((item, idx) => `
-                                <!-- 修正：點點與文字垂直居中對齊 -->
-                                <div class="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50 align-middle-flex">
-                                    <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="stats-list-item">
+                                    <div class="flex items-center gap-3 overflow-hidden flex-1">
                                         <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${getStepColor(state.themeColor, idx, chartData.length)}"></div>
-                                        <span class="text-[11px] font-bold text-slate-600 truncate leading-none">${item.label}</span>
+                                        <span class="text-[11px] font-bold text-slate-600 truncate leading-normal py-1">${item.label}</span>
                                     </div>
-                                    <div class="flex items-center gap-3 shrink-0">
+                                    <div class="flex items-center gap-3 shrink-0 ml-4">
                                         <span class="text-[10px] font-bold text-slate-300 leading-none">${item.count}</span>
                                         <span class="text-[10px] font-bold text-slate-600 w-10 text-right leading-none">${Math.round(item.percent)}%</span>
                                     </div>
@@ -638,7 +648,7 @@
                             <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-left">BUDGET (${state.activeYear}/${state.activeMonth + 1})</p>
                             <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
                                 <span class="text-slate-300 font-bold text-xs">$</span>
-                                <input type="number" value="${currentBudget}" onchange="handleBudgetChange(this.value)" class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right">
+                                <input type="number" value="${currentBudget}" onchange="handleBudgetChange(this.value)" class="w-16 bg-transparent outline-none font-bold text-slate-600 text-sm text-right leading-none">
                             </div>
                         </div>
                     </div>
@@ -652,7 +662,7 @@
                             <p class="text-[9px] font-bold text-slate-300 uppercase shrink-0">Custom Hex</p>
                             <div class="flex-1 flex items-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                                 <span class="text-slate-300 font-bold text-xs mr-1">#</span>
-                                <input type="text" value="${state.themeColor.replace('#','')}" onchange="updateTheme('#' + this.value)" class="w-full bg-transparent outline-none font-bold text-slate-500 text-xs uppercase" maxlength="6">
+                                <input type="text" value="${state.themeColor.replace('#','')}" onchange="updateTheme('#' + this.value)" class="w-full bg-transparent outline-none font-bold text-slate-500 text-xs uppercase leading-none" maxlength="6">
                             </div>
                         </div>
                     </div>
@@ -732,8 +742,8 @@
                         <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">DRINK ${idx+1}</span>
                     </div>
                     <div class="space-y-4">
-                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntrySilently(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
-                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntrySilently(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Store</p><input type="text" value="${d.store || ''}" oninput="updateEntrySilently(${idx}, 'store', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none leading-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Item</p><input type="text" value="${d.item || ''}" oninput="updateEntrySilently(${idx}, 'item', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none leading-none"></div>
                         
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-2 uppercase px-1">Ice</p>
@@ -748,17 +758,17 @@
                         <div>
                             <p class="text-[9px] font-bold text-slate-300 mb-2 uppercase px-1">Topping</p>
                             <div class="flex flex-wrap gap-1.5 mb-2">${TOPPING_OPTIONS.map(o => `<button onclick="updateEntry(${idx}, 'topping', '${o}')" class="px-3 py-2 rounded-xl text-[9px] font-bold border transition-all ${d.topping===o?'text-white shadow-sm':'bg-white text-slate-300 hover:text-slate-400 border-slate-100'}" style="${d.topping===o?`background-color:${state.themeColor}; border-color:${state.themeColor}`:''}">${o}</button>`).join('')}</div>
-                            ${showOtherTopping ? `<input type="text" value="${d.customTopping || ''}" oninput="updateEntrySilently(${idx}, 'customTopping', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none mt-1 animate-in slide-in-from-top-1 duration-200">` : ''}
+                            ${showOtherTopping ? `<input type="text" value="${d.customTopping || ''}" oninput="updateEntrySilently(${idx}, 'customTopping', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none mt-1 animate-in slide-in-from-top-1 duration-200 leading-none">` : ''}
                         </div>
 
-                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Note</p><input type="text" value="${d.note || ''}" oninput="updateEntrySilently(${idx}, 'note', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none"></div>
+                        <div><p class="text-[9px] font-bold text-slate-300 mb-1 uppercase px-1">Note</p><input type="text" value="${d.note || ''}" oninput="updateEntrySilently(${idx}, 'note', this.value)" class="w-full px-5 py-3 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 outline-none leading-none"></div>
 
                         <div class="pt-4 border-t border-slate-200/60">
                              <div class="flex items-center justify-between">
                                 <p class="text-[9px] font-bold text-slate-300 uppercase px-1">Price</p>
                                 <div class="flex items-center gap-1.5 bg-white border border-slate-100 px-4 py-2 rounded-xl">
                                     <span class="text-[9px] font-bold text-slate-300">$</span>
-                                    <input type="number" value="${d.price || ''}" oninput="updateEntrySilently(${idx}, 'price', this.value)" class="w-12 bg-transparent outline-none text-[11px] font-bold text-slate-600 text-right">
+                                    <input type="number" value="${d.price || ''}" oninput="updateEntrySilently(${idx}, 'price', this.value)" class="w-12 bg-transparent outline-none text-[11px] font-bold text-slate-600 text-right leading-none">
                                 </div>
                              </div>
                         </div>
