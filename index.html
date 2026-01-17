@@ -44,6 +44,32 @@
         
         .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
         .safe-pt { padding-top: env(safe-area-inset-top); }
+        
+/* Segmented Control Styles within Stats Card */
+.segmented-control {
+    background-color: #f1f5f9;
+    padding: 3px;
+    border-radius: 9999px;
+    display: flex;
+    position: relative;
+    width: 100%;
+    max-width: 240px; /* 寬度稍微縮小以適應卡片內佈局 */
+    margin: 0 auto;
+}
+.segmented-item {
+    /* 這裡新增了 gap 與文字樣式調整 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px; /* Icon 與文字的間距 */
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase; /* 改為全大寫英文 */
+}
+.segmented-slider {
+    /* 滑塊的動畫效果 */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
             -webkit-appearance: none; margin: 0;
